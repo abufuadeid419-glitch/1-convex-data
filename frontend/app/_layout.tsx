@@ -9,6 +9,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { homeFor, useAuth, AuthProvider } from "@/src/auth";
 import { ErrorBoundary } from "@/src/components/error-boundary";
+import { ConvexSessionSync } from "@/src/components/ConvexSessionSync";
 import { convex } from "@/src/convex";
 import { queryClient } from "@/src/query-client";
 import { useTheme } from "@/src/theme";
@@ -46,7 +47,8 @@ function Gate() {
       (seg === "reports" && ["owner", "acct"].includes(target)) ||
       (seg === "upgrade" && user?.role === "OWNER") ||
       seg === "legal" ||
-      seg === "convex-check";
+      seg === "convex-check" ||
+      (seg === "agents-map" && target === "owner");
     if (seg !== target && !allowed) router.replace(`/${target}` as any);
   }, [user, segments, router]);
 
@@ -78,6 +80,7 @@ export default function RootLayout() {
                 <UpdateGate>
                   <Gate />
                 </UpdateGate>
+                <ConvexSessionSync />
                 <BtPrintHost />
               </ToastProvider>
             </AuthProvider>

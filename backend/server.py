@@ -18,6 +18,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 client = AsyncIOMotorClient(os.environ['MONGO_URL'])
 db = client[os.environ['DB_NAME']]
+from convex_bridge import cx_delete, cx_insert, cx_upsert
 DEVELOPER_EMAILS = [e.strip().lower() for e in os.environ.get('DEVELOPER_EMAILS', '').split(',') if e.strip()]
 EMERGENT_SESSION_URL = "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data"
 
@@ -202,6 +203,9 @@ async def enrich(user: dict) -> dict:
     if user.get("org_id"):
         org = await db.organizations.find_one({"id": user["org_id"]}, NO_ID)
         out["org"] = org
+        if org:
+            cx_upsert("organizations", "id", org)
+    cx_upsert("users", "user_id", {k: v for k, v in dict(user).items() if k != "_id"})
     return out
 
 
@@ -564,6 +568,10 @@ async def create_payment_voucher(body: PaymentVoucherIn, user=Depends(AGENT)):
            "customer_id": cust["id"], "customer_name": cust["name"], "amount": body.amount, "notes": body.notes,
            "distributor_id": user["user_id"], "distributor_name": user.get("name"), "created_at": iso()}
     await db.payment_vouchers.insert_one(dict(doc))
+    cx_upsert("payment_vouchers", "id", doc)
+    c2 = await db.customers.find_one({"id": cust["id"]}, NO_ID)
+    if c2:
+        cx_upsert("customers", "id", c2)
     return doc
 
 
@@ -689,6 +697,10 @@ async def create_purchase(body: PurchaseIn, user=Depends(OWNER)):
     await db.purchases.insert_one(dict(doc))
     await db.products.update_one({"id": prod["id"]}, {"$inc": {"stock": body.quantity}, "$set": {"cost_price": body.unit_cost}})
     await log_movement(user["org_id"], prod["id"], prod["name"], "PURCHASE", body.quantity, user)
+    cx_upsert("purchases", "id", doc)
+    p2 = await db.products.find_one({"id": prod["id"]}, NO_ID)
+    if p2:
+        cx_upsert("products", "id", p2)
     return doc
 
 
@@ -797,6 +809,10 @@ async def create_sale(body: SaleIn, user=Depends(AGENT)):
            "remaining": round(total - paid, 2), "payment_type": "CASH" if paid >= total else "CREDIT",
            "notes": body.notes, "created_at": iso()}
     await db.sales.insert_one(dict(doc))
+    cx_upsert("sales", "id", doc)
+    c2 = await db.customers.find_one({"id": cust["id"]}, NO_ID)
+    if c2:
+        cx_upsert("customers", "id", c2)
     return doc
 
 
@@ -1252,7 +1268,11 @@ async def reports(period: str = "day", user=Depends(STAFF)):
 async def post_location(body: LocationIn, user=Depends(AGENT)):
     loc = {"lat": body.lat, "lng": body.lng, "accuracy": body.accuracy, "at": iso()}
     await db.agent_locations.insert_one({"org_id": user["org_id"], "user_id": user["user_id"], **loc})
+    cx_insert("agent_locations", {"org_id": user["org_id"], "user_id": user["user_id"], **loc})
     await db.users.update_one({"user_id": user["user_id"]}, {"$set": {"last_location": loc}})
+    u2 = await db.users.find_one({"user_id": user["user_id"]}, NO_ID)
+    if u2:
+        cx_upsert("users", "user_id", u2)
     return {"ok": True}
 
 
@@ -1417,16 +1437,20 @@ async def save_route(body: RouteIn, user=Depends(OWNER)):
     stops = await _build_stops(user["org_id"], body.customer_ids, ex["stops"] if ex else [], dist["user_id"])
     if ex:
         await db.routes.update_one({"id": ex["id"]}, {"$set": {"stops": stops}})
-        return await db.routes.find_one({"id": ex["id"]}, NO_ID)
+        r = await db.routes.find_one({"id": ex["id"]}, NO_ID)
+        cx_upsert("routes", "id", r)
+        return r
     doc = {"id": new_id(), "org_id": user["org_id"], "distributor_id": dist["user_id"], "distributor_name": dist.get("name"),
            "date": body.date, "stops": stops, "created_at": iso()}
     await db.routes.insert_one(dict(doc))
+    cx_upsert("routes", "id", doc)
     return doc
 
 
 @api.delete("/routes/{rid}")
 async def delete_route(rid: str, user=Depends(OWNER)):
     await db.routes.delete_one({"id": rid, "org_id": user["org_id"]})
+    cx_delete("routes", "id", rid)
     return {"ok": True}
 
 
@@ -1453,7 +1477,9 @@ async def optimize_route(rid: str, body: OptimizeIn, user=Depends(ANY_ORG)):
         cur = (nxt["lat"], nxt["lng"])
     new = done + ordered + unlocated
     await db.routes.update_one({"id": rid}, {"$set": {"stops": new}})
-    return {**await db.routes.find_one({"id": rid}, NO_ID), "unlocated": len(unlocated)}
+    r2 = await db.routes.find_one({"id": rid}, NO_ID)
+    cx_upsert("routes", "id", r2)
+    return {**r2, "unlocated": len(unlocated)}
 
 
 @api.post("/routes/{rid}/stops/{cid}/status")
@@ -1463,7 +1489,9 @@ async def stop_status(rid: str, cid: str, body: StopStatusIn, user=Depends(AGENT
         raise HTTPException(400, "حالة غير صالحة")
     await db.routes.update_one({"id": rid, "stops.customer_id": cid},
                                {"$set": {"stops.$.status": body.status, "stops.$.note": body.note, "stops.$.at": iso()}})
-    return await db.routes.find_one({"id": rid}, NO_ID)
+    r = await db.routes.find_one({"id": rid}, NO_ID)
+    cx_upsert("routes", "id", r)
+    return r
 
 
 # ---------------- Stock (restock) requests ----------------
@@ -1529,6 +1557,8 @@ async def notify(user_ids, ntype, title, body):
     docs = [{"id": new_id(), "user_id": u, "type": ntype, "title": title, "body": body, "read": False, "created_at": iso()} for u in user_ids if u]
     if docs:
         await db.notifications.insert_many(docs)
+        for d in docs:
+            cx_upsert("notifications", "id", {k: v for k, v in d.items() if k != "_id"})
 
 
 async def org_owner_ids(org_id):
@@ -1621,6 +1651,10 @@ async def create_purchase_return(body: PurchaseReturnIn, user=Depends(OWNER)):
     await db.products.update_one({"id": prod["id"]}, {"$inc": {"stock": -body.quantity}})
     await log_movement(user["org_id"], prod["id"], prod["name"], "PURCHASE_RETURN", -body.quantity, user)
     await check_low_stock(user["org_id"], [prod["id"]])
+    cx_upsert("purchase_returns", "id", doc)
+    p2 = await db.products.find_one({"id": prod["id"]}, NO_ID)
+    if p2:
+        cx_upsert("products", "id", p2)
     return doc
 
 

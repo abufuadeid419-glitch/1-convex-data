@@ -53,6 +53,9 @@ export default function ConvexCheck() {
   const distInventory = useQuery(api.deliveries.distributorsInventory, arg);
   const deliveries = useQuery(api.deliveries.list, arg);
   const employees = useQuery(api.employees.list, arg);
+  const routes = useQuery(api.routes.list, arg);
+  const vouchers = useQuery(api.vouchers.list, arg);
+  const purchases = useQuery(api.purchases.list, arg);
   const create = useMutation(api.products.create);
   const remove = useMutation(api.products.remove);
 
@@ -176,6 +179,45 @@ export default function ConvexCheck() {
                 <Row icon="mail-outline" title="دعوات معلّقة" right={<T v="label">{employees.invitations.length}</T>} />
                 {employees.invitations.map((i: any) => (
                   <Row key={i.id} icon="key-outline" title={i.name || "—"} subtitle={i.employee_type} right={<T v="label">{i.code}</T>} />
+                ))}
+              </Card>
+            )}
+
+            <T v="h2">خطوط السير (routes.list · حيّ)</T>
+            {routes === undefined ? (
+              <Loading />
+            ) : routes.length === 0 ? (
+              <Empty icon="map-outline" text="لا توجد خطوط سير" />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {routes.slice(0, 8).map((r: any) => (
+                  <Row key={r.id} icon="navigate-outline" title={r.distributor_name || "موزع"} subtitle={`${r.date} · ${(r.stops || []).length} محطة`} right={<T v="label">{(r.stops || []).filter((s: any) => s.status === "VISITED").length} زيارة</T>} />
+                ))}
+              </Card>
+            )}
+
+            <T v="h2">سندات الصرف (vouchers.list · حيّ)</T>
+            {vouchers === undefined ? (
+              <Loading />
+            ) : vouchers.length === 0 ? (
+              <Empty icon="cash-outline" text="لا توجد سندات صرف" />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {vouchers.slice(0, 8).map((p: any) => (
+                  <Row key={p.id} icon="cash-outline" title={p.customer_name || "عميل"} subtitle={`${p.voucher_no} · ${p.distributor_name || ""}`} right={<T v="label">{money(p.amount)}</T>} />
+                ))}
+              </Card>
+            )}
+
+            <T v="h2">المشتريات (purchases.list · حيّ)</T>
+            {purchases === undefined ? (
+              <Loading />
+            ) : purchases.length === 0 ? (
+              <Empty icon="bag-handle-outline" text="لا توجد مشتريات" />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {purchases.slice(0, 8).map((p: any) => (
+                  <Row key={p.id} icon="bag-handle-outline" title={p.product_name || "منتج"} subtitle={`${p.supplier || "مورّد"} · ${p.quantity} وحدة`} right={<T v="label">{money(p.total)}</T>} />
                 ))}
               </Card>
             )}

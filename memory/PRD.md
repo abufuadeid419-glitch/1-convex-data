@@ -117,3 +117,46 @@ code (LIC-), employee code (EMP-), or a 14-day self-service trial.
 - P1: enable Emergent storage (add EMERGENT_LLM_KEY) to turn on org logo on invoices.
 - P1: seed a demo org + sample data on request for quick exploration.
 - P2: push notifications (Emergent managed) — needs user's google-services.json + a native build.
+
+
+---
+
+## Convex Migration — Phase 2 (2026-06, this session)
+
+**Goal:** Port 4 more domains from MongoDB to the external Convex deployment
+(`fearless-ostrich-878`): routes + stop optimization, payment vouchers + purchases,
+real-time notification bell, and a live agent-map screen.
+
+**Architecture decision (non-breaking incremental migration):**
+FastAPI + MongoDB stay the single source of truth. After every relevant write,
+FastAPI mirrors the document into Convex through a secret-guarded write-through
+bridge, so the ported screens READ live/real-time from Convex via `useQuery`
+while writes keep flowing through the existing, consistent FastAPI paths. This
+avoids the cross-feature split the earlier migration notes warned about.
+
+**Implemented & verified (20/20 backend tests, `test_iteration10_convex_bridge.py`):**
+- `backend/convex_bridge.py` — fire-and-forget `cx_upsert` / `cx_insert` / `cx_delete`
+  calling Convex `bridge:*` over the HTTP mutation API. Failures are swallowed so the
+  app never breaks if Convex is down.
+- `frontend/convex/bridge.ts` — secret-guarded `upsert` / `insertRow` / `removeByKey`.
+- Bridge hooked into server.py: `enrich` (users+orgs), `notify` (notifications),
+  `post_location` (agent_locations + users.last_location), `create_sale`,
+  `save_route` / `optimize_route` / `stop_status` / `delete_route`,
+  `create_payment_voucher`, `create_purchase`, `create_purchase_return`.
+- New Convex functions mirroring FastAPI: `routes.ts` (list/mine/save/remove/optimize/
+  stopStatus/kpis), `vouchers.ts` (list/create), `purchases.ts` (list/create +
+  returns), `notifications.ts` (list/readAll, soft-auth).
+- Frontend: `NotificationBell` reads live from Convex (real-time badge);
+  `ConvexSessionSync` mirrors the session app-wide; new `app/agents-map.tsx` live
+  owner map (locations + today's routes + 7-day KPIs); `convex-check` dashboard now
+  also surfaces routes/vouchers/purchases live.
+
+**Still on FastAPI only (future full cutover):** customer-types/price-lists, dev
+licenses/orgs/plans/upgrades, org profile/logo, reports/alerts/finance, void-sale,
+warehouse/sales returns writes, consent/legal, deletion requests, app-version gate.
+
+**Backlog / notes:**
+- `convex/routes.ts::save` inserts rather than upserts on `id` (unreachable from the
+  app today since FastAPI owns writes) — upsert long-term before a full cutover.
+- Shared bridge secret `smartsystem-migrate-2026` lives in 3 places — centralise later.
+

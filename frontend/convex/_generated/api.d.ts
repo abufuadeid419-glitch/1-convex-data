@@ -9,17 +9,22 @@
  */
 
 import type * as auth from "../auth.js";
+import type * as bridge from "../bridge.js";
 import type * as collections from "../collections.js";
 import type * as customers from "../customers.js";
 import type * as deliveries from "../deliveries.js";
 import type * as employees from "../employees.js";
 import type * as lib from "../lib.js";
 import type * as migrate from "../migrate.js";
+import type * as notifications from "../notifications.js";
 import type * as products from "../products.js";
+import type * as purchases from "../purchases.js";
 import type * as returns from "../returns.js";
+import type * as routes from "../routes.js";
 import type * as sales from "../sales.js";
 import type * as stats from "../stats.js";
 import type * as tracking from "../tracking.js";
+import type * as vouchers from "../vouchers.js";
 
 import type {
   ApiFromModules,
@@ -29,17 +34,22 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   auth: typeof auth;
+  bridge: typeof bridge;
   collections: typeof collections;
   customers: typeof customers;
   deliveries: typeof deliveries;
   employees: typeof employees;
   lib: typeof lib;
   migrate: typeof migrate;
+  notifications: typeof notifications;
   products: typeof products;
+  purchases: typeof purchases;
   returns: typeof returns;
+  routes: typeof routes;
   sales: typeof sales;
   stats: typeof stats;
   tracking: typeof tracking;
+  vouchers: typeof vouchers;
 }>;
 
 /**

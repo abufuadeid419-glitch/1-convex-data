@@ -117,7 +117,12 @@ export default function OwnerMore() {
             <Btn testID="open-convex-check-button" variant="secondary" icon="cloud-outline" title="فحص Convex (تجريبي)" onPress={() => router.push("/convex-check" as any)} />
           </>
         ) : tab === "tracking" ? (
-          tracking.isLoading ? <Loading /> : <AgentsMap agents={tracking.data ?? []} />
+          tracking.isLoading ? <Loading /> : (
+            <>
+              <Btn testID="open-agents-map-button" icon="map-outline" title="الخريطة الحية (Convex · لحظي)" onPress={() => router.push("/agents-map" as any)} />
+              <AgentsMap agents={tracking.data ?? []} />
+            </>
+          )
         ) : tab === "team" ? (
           <>
             <Btn testID="open-invite-button" title="إضافة موظف جديد" icon="person-add-outline" onPress={() => setInvite(true)} />
