@@ -78,11 +78,20 @@ code (LIC-), employee code (EMP-), or a 14-day self-service trial.
     counters, stock-movement/price-history logging, mirroring server.py.
   - frontend/convex/products.ts + customers.ts — CRUD mirroring FastAPI (verified via convex run:
     auth ok, agent→403, bad token→401, round-trips ok).
+  - frontend/convex/sales.ts + collections.ts — sale/invoice (stock, discounts, balance, invoice
+    numbering) and debt collection (balance, receipt numbering) mirroring server.py (verified:
+    numbers match FastAPI exactly).
+  - frontend/convex/stats.ts — overview + agents + leaderboard live Convex queries (verified).
+  - frontend/convex/auth.ts (syncSession) — mirrors the already-authenticated FastAPI session into
+    Convex so the same bearer token authenticates Convex functions (does not change auth).
   - frontend/convex/migrate.ts + scripts/migrate_mongo_to_convex.mjs — Node Mongo→Convex importer
-    (verified moving seeded data).
-  - Frontend: src/convex.ts client, ConvexProvider in app/_layout.tsx, token exposed via useAuth(),
-    live app/convex-check.tsx using useQuery/useMutation (verified in web preview; reachable from
-    Owner → الإدارة → ملف المؤسسة → "فحص Convex (تجريبي)").
+    with per-table record-count verification. Run against the live Mongo here: migrated the real
+    data (2 users + "Anmira" org), all count checks passed.
+  - Frontend: src/convex.ts client, ConvexProvider in app/_layout.tsx, token via useAuth(), and
+    app/convex-check.tsx is now a LIVE Convex dashboard (overview + leaderboard + products via
+    useQuery/useMutation; reachable from Owner → الإدارة → ملف المؤسسة → "فحص Convex (تجريبي)").
+    Verified in the web preview as the real owner: dashboard renders live, UI product add appears
+    instantly.
 - Remaining for full cutover (see /app/CONVEX_MIGRATION.md): port the other ~50 endpoints (sales,
   collections, returns, deliveries, inventory, stats, routes, employees, dev/plans/upgrades, GPS,
   notifications, offline semantics) then flip ALL screens off FastAPI at once (piecemeal switching

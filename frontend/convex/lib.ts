@@ -108,4 +108,48 @@ export async function docById(ctx: QueryCtx, table: any, id: string) {
   return await ctx.db.query(table).withIndex("by_biz_id", (q: any) => q.eq("id", id)).unique();
 }
 
+// Document of a table scoped to the user's org (mirror find_one({id, org_id})).
+export async function docOrgUnique(ctx: QueryCtx, table: any, id: string, org_id: string) {
+  return await ctx.db
+    .query(table)
+    .withIndex("by_biz_id", (q: any) => q.eq("id", id))
+    .filter((q: any) => q.eq(q.field("org_id"), org_id))
+    .unique();
+}
+
 export const round2 = (n: number) => Math.round(n * 100) / 100;
+
+// ---- geo fields (mirror server.py geo(body)) ----
+export const geoFields = (a: any) => ({
+  lat: a.lat ?? null,
+  lng: a.lng ?? null,
+  client_created_at: a.client_created_at ?? null,
+});
+
+// ---- customer access (mirror org_customer): agents only reach their own ----
+export async function orgCustomer(ctx: QueryCtx, user: any, cid: string) {
+  const c = await docOrgUnique(ctx, "customers", cid, user.org_id);
+  if (!c || (isAgent(user) && c.distributor_id !== user.user_id)) throw new Error("العميل غير موجود");
+  return c;
+}
+
+// ---- price for a customer (mirror price_for): customer-type price list then product price ----
+export async function priceFor(ctx: QueryCtx, org_id: string, cust: any, product_id: string): Promise<number> {
+  if (cust?.type_id) {
+    const t = await docOrgUnique(ctx, "customer_types", cust.type_id, org_id);
+    const p = (t as any)?.prices?.[product_id];
+    if (p !== undefined && p !== null) return Number(p);
+  }
+  const prod = await docOrgUnique(ctx, "products", product_id, org_id);
+  return prod ? Number((prod as any).sale_price) : 0;
+}
+
+// ---- distributor inventory line for (distributor, product) ----
+export async function distInv(ctx: QueryCtx, distributor_id: string, product_id: string) {
+  return await ctx.db
+    .query("distributor_inventory")
+    .withIndex("by_dist_product", (q) => q.eq("distributor_id", distributor_id).eq("product_id", product_id))
+    .unique();
+}
+
+export const sumBy = (rows: any[], field: string) => round2(rows.reduce((n, r) => n + (r[field] || 0), 0));

@@ -66,6 +66,7 @@ const COLLECTIONS = [
 
 const importBatch = makeFunctionReference("migrate:importBatch");
 const clearTable = makeFunctionReference("migrate:clearTable");
+const countTable = makeFunctionReference("migrate:countTable");
 
 const toPlainJson = (doc) => {
   const { _id, ...rest } = doc; // drop Mongo ObjectId
@@ -80,12 +81,14 @@ async function main() {
   console.log(`Migrating ${DB_NAME} -> ${CONVEX_URL}\n`);
 
   let grand = 0;
+  const report = []; // { name, mongo, inserted }
   for (const name of COLLECTIONS) {
     const exists = await db.listCollections({ name }).hasNext();
     if (!exists) {
       console.log(`- ${name}: (no such collection, skipped)`);
       continue;
     }
+    const mongoCount = await db.collection(name).countDocuments({});
     const docs = (await db.collection(name).find({}).toArray()).map(toPlainJson);
     if (CLEAR) await convex.mutation(clearTable, { secret: SECRET, table: name });
     let inserted = 0;
@@ -94,11 +97,29 @@ async function main() {
       inserted += res.inserted;
     }
     grand += inserted;
+    report.push({ name, mongo: mongoCount, inserted });
     console.log(`- ${name}: ${inserted} documents`);
+  }
+
+  // ---- record-count verification: Mongo vs Convex ----
+  console.log(`\nVerifying record counts (Mongo vs Convex)…`);
+  let mismatches = 0;
+  for (const row of report) {
+    const { count: convexCount } = await convex.query(countTable, { secret: SECRET, table: row.name });
+    // When CLEAR=1, Convex holds exactly the migrated rows; otherwise it may hold
+    // pre-existing rows too, so we check that Convex has AT LEAST the Mongo count.
+    const ok = CLEAR ? convexCount === row.mongo : convexCount >= row.mongo;
+    if (!ok) mismatches++;
+    console.log(`  ${ok ? "✓" : "✗"} ${row.name}: mongo=${row.mongo} convex=${convexCount}`);
   }
 
   await mongo.close();
   console.log(`\nDone. ${grand} documents migrated to Convex.`);
+  if (mismatches) {
+    console.error(`\n${mismatches} table(s) failed the count check.`);
+    process.exit(2);
+  }
+  console.log(`All ${report.length} migrated table(s) passed the count check.`);
 }
 
 main().catch((e) => {

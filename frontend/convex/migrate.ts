@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 
-import { mutation } from "./_generated/server";
+import { mutation, query } from "./_generated/server";
 
 // Dev-only bulk import endpoints used by scripts/migrate_mongo_to_convex.mjs.
 // Guarded by a shared secret. Remove (and redeploy) once the migration is done.
@@ -27,5 +27,15 @@ export const clearTable = mutation({
     const rows = await ctx.db.query(table as any).collect();
     for (const r of rows) await ctx.db.delete(r._id);
     return { deleted: rows.length };
+  },
+});
+
+// Row count for a table — used by the migration script to verify counts match Mongo.
+export const countTable = query({
+  args: { secret: v.string(), table: v.string() },
+  handler: async (ctx, { secret, table }) => {
+    if (secret !== SECRET) throw new Error("bad secret");
+    const rows = await ctx.db.query(table as any).collect();
+    return { count: rows.length };
   },
 });
