@@ -58,6 +58,15 @@ code (LIC-), employee code (EMP-), or a 14-day self-service trial.
 - Verified on web preview with a seeded owner token: card renders, progress is correct, both deep
   links open their sheets. Separate from the existing tab-explainer GuidedTour.
 
+## Bug fix: distributor/field-agent role (2026-06)
+- Reported: logging in as a field agent showed "Unmatched Route — Page could not be found".
+- Cause: homeFor() routes field agents to /dist, but the app/dist/ route group was never committed
+  in the source repo (the distributor screens existed in src/screens but had no route).
+- Fix: added app/dist/_layout.tsx (RoleTabs, tourKey "dist") with 4 tabs — index→Overview,
+  sale→NewSale, customers→Customers, ops→DistributorOps.
+- Verified by testing agent (report iteration_9.json): all 4 tabs render, no Unmatched Route, 9/9
+  agent endpoints 200, owner/acct/dev regression OK.
+
 ## Known constraints
 - Login is Emergent Google OAuth — deep frontend flows cannot be automated; validated via backend
   suite + seeded tokens (see /app/memory/test_credentials.md) and login-screen render check.
