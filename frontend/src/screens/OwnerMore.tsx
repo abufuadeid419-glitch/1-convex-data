@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { RefreshControl, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
+import { useLocalSearchParams } from "expo-router";
 import { fmtDate } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { AccountButton } from "@/src/components/AccountButton";
@@ -80,6 +81,16 @@ export default function OwnerMore() {
   const deliveries = useApi<any[]>("/deliveries");
   const [invite, setInvite] = useState(false);
   const [deliver, setDeliver] = useState(false);
+
+  // Deep link from the owner onboarding guide: jump to the team tab and open the invite sheet.
+  const params = useLocalSearchParams<{ invite?: string }>();
+  useEffect(() => {
+    if (params.invite === "1") {
+      setTab("team");
+      setInvite(true);
+    }
+  }, [params.invite]);
+
   const delInvite = useMutate<any>("DELETE", (b) => `/employees/invite/${b.id}`, "تم حذف الدعوة");
   const removeEmp = useMutate<any>("DELETE", (b) => `/employees/${b.user_id}`, "تمت إزالة الموظف");
   const agents = (emps.data?.employees ?? []).filter((e: any) => e.employee_type === "FIELD_AGENT");

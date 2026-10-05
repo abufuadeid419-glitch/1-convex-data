@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useLocalSearchParams } from "expo-router";
+import { useEffect, useState } from "react";
 import { FlatList, RefreshControl, View } from "react-native";
 
 import { money } from "@/src/api";
@@ -24,6 +25,15 @@ export default function Products() {
   const update = useMutate<any>("PUT", (b) => `/products/${b.id}`, "تم تحديث المنتج", () => setEdit(null));
   const del = useMutate<any>("DELETE", (b) => `/products/${b.id}`, "تم حذف المنتج", () => setEdit(null));
   const purchase = useMutate("POST", "/purchases", "تمت إضافة الكمية للمستودع", () => setBuy(null));
+
+  // Deep link from the owner onboarding guide: open the "new product" sheet automatically.
+  const params = useLocalSearchParams<{ new?: string }>();
+  useEffect(() => {
+    if (params.new === "1") {
+      setForm(blank);
+      setEdit({});
+    }
+  }, [params.new]);
 
   const open = (p?: any) => {
     setForm(p ? { ...p, cost_price: String(p.cost_price), sale_price: String(p.sale_price), stock: String(p.stock), min_stock: String(p.min_stock) } : blank);

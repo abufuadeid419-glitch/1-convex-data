@@ -9,6 +9,7 @@ import { AlertsCard } from "@/src/components/AlertsCard";
 import { Leaderboard } from "@/src/components/Leaderboard";
 import { StaleDebtorsCard } from "@/src/components/StaleDebtors";
 import { MyRoute } from "@/src/components/MyRoute";
+import { OwnerOnboarding } from "@/src/components/OwnerOnboarding";
 import { PendingDeliveries } from "@/src/components/PendingDeliveries";
 import { AgentStock } from "@/src/components/StockRequests";
 import { SyncBanner } from "@/src/components/SyncBanner";
@@ -42,6 +43,7 @@ export default function Overview() {
           <ErrorBox message={(stats.error as Error).message} onRetry={stats.refetch} />
         ) : (
           <>
+            {isOwner && <OwnerOnboarding />}
             {isAgent && <LocationCard />}
             {!isAgent && (
               <Btn testID="open-reports-button" variant="secondary" icon="bar-chart-outline" title="التقارير اليومية والأسبوعية والشهرية" onPress={() => router.push("/reports")} />

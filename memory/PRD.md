@@ -46,6 +46,18 @@ code (LIC-), employee code (EMP-), or a 14-day self-service trial.
 - Accountant: overview, invoices/collections/returns, debts with collect, customer statements.
 - Blocked screen for suspended/expired orgs; terms/privacy consent gate; legal screens.
 
+## Feature: Owner onboarding guide (2026-06)
+- New component src/components/OwnerOnboarding.tsx: a first-run checklist card on the owner home
+  (src/screens/Overview.tsx, OWNER only) with two steps — "أضف أول منتج للمخزون" and
+  "ادعُ أول موزع ميداني". Progress auto-detects from live data (/stats/overview products count,
+  /employees field-agents + pending FIELD_AGENT invites), shows a progress bar + strikethrough on
+  done steps, and persists completion/dismissal in storage (key onboarding_owner_done_<org_id>).
+- Tap-and-go deep links: "إضافة منتج" → /owner/products?new=1 (auto-opens the new-product sheet in
+  src/screens/Products.tsx); "دعوة موزع" → /owner/more?invite=1 (jumps to the team tab and opens the
+  invite sheet in src/screens/OwnerMore.tsx).
+- Verified on web preview with a seeded owner token: card renders, progress is correct, both deep
+  links open their sheets. Separate from the existing tab-explainer GuidedTour.
+
 ## Known constraints
 - Login is Emergent Google OAuth — deep frontend flows cannot be automated; validated via backend
   suite + seeded tokens (see /app/memory/test_credentials.md) and login-screen render check.
