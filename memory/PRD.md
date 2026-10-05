@@ -160,3 +160,40 @@ warehouse/sales returns writes, consent/legal, deletion requests, app-version ga
   app today since FastAPI owns writes) — upsert long-term before a full cutover.
 - Shared bridge secret `smartsystem-migrate-2026` lives in 3 places — centralise later.
 
+
+---
+
+## FULL CUTOVER TO CONVEX — MongoDB retired (2026-06, this session)
+
+Convex is now the ONLY backend + database. The entire REST surface (`/api/...`)
+is served by a Convex HTTP router; FastAPI + MongoDB are retired.
+
+**Architecture**
+- `convex/http.ts` — HTTP router mapping all ~104 `/api/...` routes (GET/POST/PUT/
+  PATCH/DELETE, path params, query strings, bearer auth, CORS, Arabic error
+  `{detail}` with 400/401/403/404) to Convex queries/mutations/actions.
+- `convex/extra.ts` — ported remaining domains: auth me/logout/consent/delete,
+  void-sale, stock-movements, price-history, customer-types/price-lists, debts
+  stale/digest, org profile/currency, plans, settings, upgrade-requests,
+  deletion-requests, app-version, backup, stats alerts/finance/reports, and the
+  full developer console (stats/licenses/orgs/plans/settings/upgrade-review/
+  monitoring/versions/deletion-review).
+- `convex/edge.ts` — Google OAuth session exchange (`exchangeSession` action +
+  `createSession` mutation, keeps the first-user-is-developer bootstrap) and logo
+  upload/serve using Convex file storage (`ctx.storage`), replacing Emergent
+  Object Storage. Same `{data_uri}` contract for the app.
+- Existing domain functions reused: products, customers, sales, collections,
+  returns, deliveries + inventory + stock-requests, employees + activate/trial,
+  vouchers, purchases, routes, tracking, stats, notifications.
+- Frontend unchanged: `EXPO_PUBLIC_BACKEND_URL` now points to the Convex `.site`
+  domain, so every existing `api()/useApi/useMutate` call hits Convex.
+- `backend/server.py` is now a DB-less stub (no motor/Mongo client); MongoDB is
+  no longer connected anywhere. The write-through bridge is obsolete.
+
+**Verified:** 63/63 backend tests (`test_iteration11_convex_rest.py`) — auth,
+role gates, 22 reads, full write chain (product→purchase→deliver→confirm→sell→
+collect→route→invite), dev console, CORS, and that the FastAPI stub has no Mongo.
+
+**Cleanup backlog (non-blocking):** drop unused `motor`/`pymongo` pins from
+`backend/requirements.txt`; the `convex/bridge.ts` + `backend/convex_bridge.py`
+write-through bridge is now unused and can be removed.
