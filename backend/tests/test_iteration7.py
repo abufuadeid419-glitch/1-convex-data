@@ -23,7 +23,7 @@ import pytest
 import requests
 
 BASE_URL = os.environ.get("EXPO_PUBLIC_BACKEND_URL",
-                          "https://mobile-rebuild-22.preview.emergentagent.com").rstrip("/")
+                          "https://text-fixer-32.preview.emergentagent.com").rstrip("/")
 API = f"{BASE_URL}/api"
 TOK = {"dev": "test_token_dev", "owner": "test_token_owner",
        "agent": "test_token_agent", "agent2": "test_token_agent2",
