@@ -1,4 +1,5 @@
 import { QueryClientProvider } from "@tanstack/react-query";
+import { ConvexProvider } from "convex/react";
 import { useFonts } from "expo-font";
 import { Stack, useRouter, useSegments } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -8,6 +9,7 @@ import { KeyboardProvider } from "react-native-keyboard-controller";
 
 import { homeFor, useAuth, AuthProvider } from "@/src/auth";
 import { ErrorBoundary } from "@/src/components/error-boundary";
+import { convex } from "@/src/convex";
 import { queryClient } from "@/src/query-client";
 import { useTheme } from "@/src/theme";
 import { ToastProvider } from "@/src/ui";
@@ -43,7 +45,8 @@ function Gate() {
     const allowed =
       (seg === "reports" && ["owner", "acct"].includes(target)) ||
       (seg === "upgrade" && user?.role === "OWNER") ||
-      seg === "legal";
+      seg === "legal" ||
+      seg === "convex-check";
     if (seg !== target && !allowed) router.replace(`/${target}` as any);
   }, [user, segments, router]);
 
@@ -66,19 +69,21 @@ export default function RootLayout() {
   if (!loaded) return null;
   return (
     <ErrorBoundary>
-      <QueryClientProvider client={queryClient}>
-        <KeyboardProvider>
-          <AuthProvider>
-            <ToastProvider>
-              <StatusBar style="dark" />
-              <UpdateGate>
-                <Gate />
-              </UpdateGate>
-              <BtPrintHost />
-            </ToastProvider>
-          </AuthProvider>
-        </KeyboardProvider>
-      </QueryClientProvider>
+      <ConvexProvider client={convex}>
+        <QueryClientProvider client={queryClient}>
+          <KeyboardProvider>
+            <AuthProvider>
+              <ToastProvider>
+                <StatusBar style="dark" />
+                <UpdateGate>
+                  <Gate />
+                </UpdateGate>
+                <BtPrintHost />
+              </ToastProvider>
+            </AuthProvider>
+          </KeyboardProvider>
+        </QueryClientProvider>
+      </ConvexProvider>
     </ErrorBoundary>
   );
 }

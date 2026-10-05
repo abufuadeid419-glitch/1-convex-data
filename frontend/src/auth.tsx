@@ -27,6 +27,7 @@ export type User = {
 
 type Ctx = {
   user: User | null | undefined;
+  token: string | null | undefined;
   error: string | null;
   busy: boolean;
   login: () => Promise<void>;
@@ -45,6 +46,7 @@ const extractSessionId = (url?: string | null) => {
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUserState] = useState<User | null | undefined>(undefined);
+  const [token, setTokenState] = useState<string | null | undefined>(undefined);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -52,6 +54,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     await storage.secureRemove(TOKEN_KEY);
     await clearOffline();
     setToken(null);
+    setTokenState(null);
     queryClient.clear();
     setUserState(null);
   }, []);
@@ -68,6 +71,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       setToken(r.session_token);
       await storage.secureSet(TOKEN_KEY, r.session_token);
+      setTokenState(r.session_token);
       setUserState(r.user);
       return true;
     } catch (e: any) {
@@ -104,6 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const t = await storage.secureGet(TOKEN_KEY, null);
       if (!t) return setUserState(null);
       setToken(String(t));
+      setTokenState(String(t));
       try {
         setUserState(await api<User>("/auth/me"));
       } catch {
@@ -156,7 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, error, busy, login, logout, setUser: setUserState, refresh }}>
+    <AuthContext.Provider value={{ user, token, error, busy, login, logout, setUser: setUserState, refresh }}>
       {children}
     </AuthContext.Provider>
   );

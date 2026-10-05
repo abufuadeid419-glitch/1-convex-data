@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { RefreshControl, View } from "react-native";
 import { KeyboardAwareScrollView } from "react-native-keyboard-controller";
 
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { fmtDate } from "@/src/api";
 import { useAuth } from "@/src/auth";
 import { AccountButton } from "@/src/components/AccountButton";
@@ -74,6 +74,7 @@ function DeliverySheet({ visible, onClose, agents }: { visible: boolean; onClose
 export default function OwnerMore() {
   const { colors } = useTheme();
   const { user } = useAuth();
+  const router = useRouter();
   const bottom = useBottomChrome();
   const [tab, setTab] = useState<"team" | "deliveries" | "routes" | "prices" | "tracking" | "profile">("team");
   const tracking = useApi<any[]>("/tracking/agents", tab === "tracking", 60000);
@@ -113,6 +114,7 @@ export default function OwnerMore() {
           <>
             <OrgProfile />
             <OrgSettings />
+            <Btn testID="open-convex-check-button" variant="secondary" icon="cloud-outline" title="فحص Convex (تجريبي)" onPress={() => router.push("/convex-check" as any)} />
           </>
         ) : tab === "tracking" ? (
           tracking.isLoading ? <Loading /> : <AgentsMap agents={tracking.data ?? []} />

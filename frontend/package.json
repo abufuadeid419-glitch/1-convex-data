@@ -17,6 +17,7 @@
     "@react-native-community/netinfo": "12.0.1",
     "@react-native-vector-icons/ionicons": "13.1.4",
     "@tanstack/react-query": "5.102.8",
+    "convex": "1.46.0",
     "date-fns": "4.1.0",
     "dayjs": "1.11.13",
     "expo": "57.0.25",

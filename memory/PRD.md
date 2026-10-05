@@ -67,6 +67,27 @@ code (LIC-), employee code (EMP-), or a 14-day self-service trial.
 - Verified by testing agent (report iteration_9.json): all 4 tabs render, no Unmatched Route, 9/9
   agent endpoints 200, owner/acct/dev regression OK.
 
+## Convex migration (2026-06, in progress — self-managed external)
+- User requested migrating the DB from MongoDB to Convex. Per platform support, a full backend
+  swap isn't Emergent-deployable, so Convex is set up as a user-managed external service alongside
+  the unchanged FastAPI+Mongo stack. User provided deploy URL + deploy key (stored in backend/.env
+  as CONVEX_DEPLOY_KEY; client URL EXPO_PUBLIC_CONVEX_URL in frontend .env/.env.local).
+- Done & verified on deployment `fearless-ostrich-878`:
+  - frontend/convex/schema.ts — all 29 Mongo collections as Convex tables + indexes (deployed).
+  - frontend/convex/lib.ts — bearer-token auth + role gates (OWNER/STAFF/AGENT/ANY_ORG/DEV),
+    counters, stock-movement/price-history logging, mirroring server.py.
+  - frontend/convex/products.ts + customers.ts — CRUD mirroring FastAPI (verified via convex run:
+    auth ok, agent→403, bad token→401, round-trips ok).
+  - frontend/convex/migrate.ts + scripts/migrate_mongo_to_convex.mjs — Node Mongo→Convex importer
+    (verified moving seeded data).
+  - Frontend: src/convex.ts client, ConvexProvider in app/_layout.tsx, token exposed via useAuth(),
+    live app/convex-check.tsx using useQuery/useMutation (verified in web preview; reachable from
+    Owner → الإدارة → ملف المؤسسة → "فحص Convex (تجريبي)").
+- Remaining for full cutover (see /app/CONVEX_MIGRATION.md): port the other ~50 endpoints (sales,
+  collections, returns, deliveries, inventory, stats, routes, employees, dev/plans/upgrades, GPS,
+  notifications, offline semantics) then flip ALL screens off FastAPI at once (piecemeal switching
+  breaks cross-feature flows). Until then the app runs unchanged on FastAPI+MongoDB.
+
 ## Known constraints
 - Login is Emergent Google OAuth — deep frontend flows cannot be automated; validated via backend
   suite + seeded tokens (see /app/memory/test_credentials.md) and login-screen render check.
