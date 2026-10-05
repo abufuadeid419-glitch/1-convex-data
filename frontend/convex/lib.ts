@@ -153,3 +153,46 @@ export async function distInv(ctx: QueryCtx, distributor_id: string, product_id:
 }
 
 export const sumBy = (rows: any[], field: string) => round2(rows.reduce((n, r) => n + (r[field] || 0), 0));
+
+// ---- distributor inventory adjust (mirror $inc quantity with upsert) ----
+export async function invAdjust(
+  ctx: MutationCtx,
+  org_id: string,
+  distributor_id: string,
+  product_id: string,
+  product_name: string,
+  inc: number,
+) {
+  const row = await distInv(ctx, distributor_id, product_id);
+  if (row) await ctx.db.patch(row._id, { quantity: round2((row.quantity ?? 0) + inc), org_id, product_name });
+  else await ctx.db.insert("distributor_inventory", { org_id, distributor_id, product_id, product_name, quantity: round2(inc) });
+}
+
+// ---- notifications (mirror notify) ----
+export async function notify(ctx: MutationCtx, userIds: (string | null | undefined)[], ntype: string, title: string, body: string) {
+  for (const u of userIds) {
+    if (u) await ctx.db.insert("notifications", { id: newId(), user_id: u, type: ntype, title, body, read: false, created_at: nowIso() });
+  }
+}
+
+export async function orgOwnerIds(ctx: QueryCtx, org_id: string) {
+  const org = await orgById(ctx, org_id);
+  return org?.owner_id ? [org.owner_id] : [];
+}
+
+// ---- low-stock owner alerts (mirror check_low_stock) ----
+export async function checkLowStock(ctx: MutationCtx, org_id: string, productIds: string[]) {
+  for (const pid of productIds) {
+    const p = await docOrgUnique(ctx, "products", pid, org_id);
+    if (p && (p.stock ?? 0) <= (p.min_stock ?? 0)) {
+      const out = (p.stock ?? 0) <= 0;
+      await notify(
+        ctx,
+        await orgOwnerIds(ctx, org_id),
+        out ? "out_of_stock" : "low_stock",
+        out ? "نفاد المخزون" : "مخزون منخفض",
+        `${p.name}: المتبقي ${p.stock ?? 0} ${p.unit ?? ""}`,
+      );
+    }
+  }
+}

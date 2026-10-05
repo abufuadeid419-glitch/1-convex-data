@@ -82,16 +82,25 @@ code (LIC-), employee code (EMP-), or a 14-day self-service trial.
     numbering) and debt collection (balance, receipt numbering) mirroring server.py (verified:
     numbers match FastAPI exactly).
   - frontend/convex/stats.ts — overview + agents + leaderboard live Convex queries (verified).
+  - frontend/convex/returns.ts — sales-returns + warehouse-returns (create/accept/reject) mirroring
+    server.py (verified: stock + balances adjust correctly).
+  - frontend/convex/deliveries.ts — deliveries (create/confirm/reject), stock-requests
+    (create/fulfill/reject), myInventory + distributorsInventory (verified end-to-end).
+  - frontend/convex/employees.ts — list/invite/deleteInvite/remove + activate (EMP-/license) + trial
+    (verified: invite→activate promotes the user; re-activate blocked).
+  - frontend/convex/tracking.ts — postLocation + agents + trail for the live owner agent map
+    (verified: GPS ping shows on owner map + trail).
   - frontend/convex/auth.ts (syncSession) — mirrors the already-authenticated FastAPI session into
     Convex so the same bearer token authenticates Convex functions (does not change auth).
   - frontend/convex/migrate.ts + scripts/migrate_mongo_to_convex.mjs — Node Mongo→Convex importer
     with per-table record-count verification. Run against the live Mongo here: migrated the real
     data (2 users + "Anmira" org), all count checks passed.
   - Frontend: src/convex.ts client, ConvexProvider in app/_layout.tsx, token via useAuth(), and
-    app/convex-check.tsx is now a LIVE Convex dashboard (overview + leaderboard + products via
-    useQuery/useMutation; reachable from Owner → الإدارة → ملف المؤسسة → "فحص Convex (تجريبي)").
-    Verified in the web preview as the real owner: dashboard renders live, UI product add appears
-    instantly.
+    app/convex-check.tsx is now a LIVE Convex dashboard (overview + leaderboard + products +
+    live agent map + distributor inventory + deliveries + employees via useQuery/useMutation;
+    reachable from Owner → الإدارة → ملف المؤسسة → "فحص Convex (تجريبي)"). Verified in the web
+    preview as the real owner: dashboard renders live, UI product add appears instantly.
+  - Verification scripts: scripts/verify_convex.sh + scripts/verify_convex2.mjs (23/23 e2e assertions).
 - Remaining for full cutover (see /app/CONVEX_MIGRATION.md): port the other ~50 endpoints (sales,
   collections, returns, deliveries, inventory, stats, routes, employees, dev/plans/upgrades, GPS,
   notifications, offline semantics) then flip ALL screens off FastAPI at once (piecemeal switching

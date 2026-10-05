@@ -49,6 +49,10 @@ export default function ConvexCheck() {
   const overview = useQuery(api.stats.overview, arg);
   const board = useQuery(api.stats.leaderboard, arg);
   const products = useQuery(api.products.list, arg);
+  const tracking = useQuery(api.tracking.agents, arg);
+  const distInventory = useQuery(api.deliveries.distributorsInventory, arg);
+  const deliveries = useQuery(api.deliveries.list, arg);
+  const employees = useQuery(api.employees.list, arg);
   const create = useMutation(api.products.create);
   const remove = useMutation(api.products.remove);
 
@@ -109,6 +113,69 @@ export default function ConvexCheck() {
                     subtitle={`${a.sales_count} فاتورة · تحصيل ${money(a.collections_total)}`}
                     right={<T v="label">{money(a.sales_total)}</T>}
                   />
+                ))}
+              </Card>
+            )}
+
+            <T v="h2">الخريطة الحية للمندوبين (tracking.agents)</T>
+            {tracking === undefined ? (
+              <Loading />
+            ) : tracking.length === 0 ? (
+              <Empty icon="map-outline" text="لا يوجد مندوبون بعد" />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {tracking.map((a: any) => (
+                  <Row
+                    key={a.user_id}
+                    icon="navigate-outline"
+                    title={a.name || a.email}
+                    subtitle={
+                      a.last_location
+                        ? `آخر موقع: ${Number(a.last_location.lat).toFixed(4)}, ${Number(a.last_location.lng).toFixed(4)}`
+                        : "لا يوجد موقع بعد"
+                    }
+                    right={<T v="label">{a.today_visits.length} زيارة</T>}
+                  />
+                ))}
+              </Card>
+            )}
+            <T v="caption" color="muted">خريطة المسار الكاملة تظهر داخل تطبيق الجوال (نسخة مبنية).</T>
+
+            <T v="h2">مخزون الموزعين (distributorsInventory)</T>
+            {distInventory === undefined ? (
+              <Loading />
+            ) : distInventory.length === 0 ? (
+              <Empty icon="cube-outline" text="لا يوجد مخزون لدى الموزعين" />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {distInventory.map((r: any, i: number) => (
+                  <Row key={i} icon="cube-outline" title={r.product_name} subtitle="لدى موزع" right={<T v="label">{r.quantity}</T>} />
+                ))}
+              </Card>
+            )}
+
+            <T v="h2">آخر الشحنات (deliveries.list)</T>
+            {deliveries === undefined ? (
+              <Loading />
+            ) : deliveries.length === 0 ? (
+              <Empty icon="cube-outline" text="لا توجد شحنات" />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                {deliveries.slice(0, 8).map((d: any) => (
+                  <Row key={d.id} icon="cube-outline" title={d.distributor_name || "—"} subtitle={`${(d.items || []).length} صنف`} right={<T v="label">{d.status}</T>} />
+                ))}
+              </Card>
+            )}
+
+            <T v="h2">الموظفون (employees.list)</T>
+            {employees === undefined ? (
+              <Loading />
+            ) : (
+              <Card style={{ padding: 0, overflow: "hidden" }}>
+                <Row icon="people-outline" title="عدد الموظفين" right={<T v="label">{employees.employees.length}</T>} />
+                <Row icon="mail-outline" title="دعوات معلّقة" right={<T v="label">{employees.invitations.length}</T>} />
+                {employees.invitations.map((i: any) => (
+                  <Row key={i.id} icon="key-outline" title={i.name || "—"} subtitle={i.employee_type} right={<T v="label">{i.code}</T>} />
                 ))}
               </Card>
             )}
